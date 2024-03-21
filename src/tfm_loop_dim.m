@@ -8,38 +8,46 @@
 
 function [atoms, cm_o] = tfm_loop_dim(atoms, V, lx, ly, lz, b_test)
     lxyz = sqrt(sum([lx ly lz].^2));
+    lsim = [lx ly lz];
     for nd = 1:length(V)
         n_at = size(atoms,1);
         Tr = eye(4, 4,'single');
-        ic = 1;
+        ic(nd) = 1;
         while true       
-            Tr(1:3,4) = ic*V(:,nd);
+            Tr(1:3,4) = ic(nd)*V(:,nd);
             tr_xyz = (Tr*[atoms(1:n_at,2:end)'; ones(1,n_at,'single')])';
             tr_xyz(:,end) = [];
             cm = fcn_center(atoms);
             atoms_it = [atoms(1:n_at,1) tr_xyz];
             atoms = cat(1, atoms, atoms_it);
-            ic = ic + 1;
+            ic(nd) = ic(nd) + 1;
             if atoms_in(atoms_it, cm, lxyz) == 0
-                break;
+                if floor(lsim(nd)/V(nd,nd)) == lsim(nd)/V(nd,nd)
+                    if mod(lsim(nd)/V(nd,nd),2) == mod(ic(nd),2)
+                        break;
+                    end
+                else
+                    break;
+                end
             end 
             if b_test
                 tfm_plot_crystal(atoms); axis on; hold on;
             end
         end
     end
-    
+
+
     % Shift centre to zero , cut to box
     [cm, cm_o] = fcn_center(atoms);
     atoms(:,2:4) = atoms(:,2:4) - cm;
     [~, b_out] = atoms_crop(atoms, [lx ly lz]);
-    
+
     if b_test
         plot_in_out(atoms,b_out);
-    end   
-    
+    end
+
     atoms(b_out,:) = [];
-    
+
 end
 
 function [cm, cm_o] = fcn_center(atoms)
